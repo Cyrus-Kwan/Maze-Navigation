@@ -4,24 +4,34 @@ colour_set = {
     "wall":"black", 
     "path":"white", 
     "visited":"yellow", 
-    "neighbour":"orange"
+    "neighbour":"orange",
+    "start":"red",
+    "stop":"green"
     }
 
-class Cell():
+class Cell:
     size:int = 25
-    def __init__(self, row:int, col:int, wall:bool=None):
+    def __init__(self, row:int, col:int, path:bool=None):
         self.row:int = row
         self.col:int = col
 
-        if wall == None:
-            self.wall:bool = True if random.random() < 0.2 else False
+        if path == None:
+            self.path:bool = False if random.random() < 0.2 else True
         else:
-            self.wall:bool = wall
+            self.path:bool = path
             
-        if self.wall:
-            self.colour = colour_set["wall"]
+        if self.path:
+            self.colour:str = colour_set["path"]
         else:
-            self.colour = colour_set["path"]
+            self.colour:str = colour_set["wall"]
+
+    def __eq__(self, other):
+        row = (self.row == other.row)
+        col = (self.col == other.col)
+        path = (self.path == other.path)
+        colour = (self.colour == other.colour)
+
+        return row and col and path and colour
 
 def main():
 
