@@ -3,10 +3,11 @@ import random
 colour_set = {
     "wall":"black", 
     "path":"white", 
-    "visited":"yellow", 
-    "neighbour":"orange",
     "start":"red",
-    "stop":"green"
+    "stop":"limegreen",
+    "explored":"yellow", 
+    "frontier":"orange",
+    "solution":"blue"
     }
 
 class Cell:
@@ -32,6 +33,9 @@ class Cell:
         colour = (self.colour == other.colour)
 
         return row and col and path and colour
+    
+    def __str__(self):
+        return f"row:{self.row}, col:{self.col}"
 
 def main():
 
