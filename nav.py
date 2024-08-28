@@ -18,9 +18,6 @@ class Navigation:
         self.window = tk.Tk()
         self.canvas = tk.Canvas(master=self.window, width=self.maze.width, height=self.maze.height)
         self.canvas.pack()
-        self.breadth_first_search(start=(0,0), stop=(19,19))
-        self.window.mainloop()
-
 
     def breadth_first_search(self, start:tuple, stop:tuple):
         start_row:int = start[0]
@@ -32,16 +29,21 @@ class Navigation:
         start_cell:Cell = self.grid[start_row][start_col]
         stop_cell:Cell = self.grid[stop_row][stop_col]
 
-        frontier:list[Cell] = [curr]    # Stack/queue
-        parents:list[Cell] = {}         # Previously visited node for finding shortest path
-        explored:list[Cell] = []
+        if not (start_cell.path and stop_cell.path):
+            raise AttributeError("Start and stop cells must be valid")
+
+        frontier:list[Cell] = [curr]                # Stack/queue
+        parents:list[Cell] = {}                     # Previously visited node for finding shortest path
+        explored:list[Cell] = []                    # Do not repeat neighbours
 
         if curr == stop_cell:
             return curr
         
         while frontier != []:
-            curr = frontier.pop(0)      # Pop from start of list FIFO
+            curr:Cell = frontier.pop(0)             # Pop from start of list FIFO
             explored.append(curr)
+
+            # Animate window
             curr.colour = colour_set["explored"]
             start_cell.colour = colour_set["start"]
             stop_cell.colour = colour_set["stop"]
@@ -49,34 +51,43 @@ class Navigation:
             self.maze.draw_grid(canvas=self.canvas)
             time.sleep(0.01)
 
+            # Check surrounding current cell for neighbours
             for row, col in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
                 new_row, new_col = curr.row+row, curr.col+col
                 if 0 <= new_row < len(self.grid) and 0 <= new_col < len(self.grid[0]):
                     neighbour = self.grid[new_row][new_col]
+
+                    # Check the neighbouring cell is not a wall
                     if not neighbour.path:
                         continue
+
+                    # Check the neighbouring cell has not been visited
+                    if (neighbour not in frontier) and (neighbour not in explored):
+                        parents[(neighbour.row, neighbour.col)] = curr
+                        frontier.append(neighbour)
+
+                    # Stop when solution has been found
                     if neighbour == stop_cell:
                         # Append goal cell to find parent
                         parents[(neighbour.row, neighbour.col)] = curr
                         path = self.shortest_path(start=start_cell, stop=stop_cell, parents=parents)
                         for cell in path[1:-1]:
+                            # Animate solution
                             cell.colour = colour_set["solution"]
                             self.window.update()
                             self.maze.draw_grid(canvas=self.canvas)
                             time.sleep(0.01)
                         return path
-                    if (neighbour not in frontier) and (neighbour not in explored):
-                        parents[(neighbour.row, neighbour.col)] = curr
-                        frontier.append(neighbour)
 
             # Colour visualization for cells that are currently in the queue
             for cell in frontier:
                 cell.colour = colour_set["frontier"]
-        return
+        raise AttributeError("The given matrix has solution.")
+        return 
 
     def shortest_path(self, start:Cell, stop:Cell, parents:dict):
         '''
-        Returns the shortes
+        Returns the shortest path from a child:parent map
         '''
         path = []
         prev = stop
@@ -89,7 +100,10 @@ class Navigation:
 
 def main():
     nav = Navigation(file_name="maze.csv")
-    # result = nav.breadth_first_search(start=(0,0), stop=(19,19))
+    path = nav.breadth_first_search(start=(10,2), stop=(12,19))
+    short_path = [cell.__str__() for cell in path]
+    print(short_path)
+    nav.window.mainloop()
 
     return
 
