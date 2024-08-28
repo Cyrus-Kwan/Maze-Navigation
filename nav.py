@@ -32,41 +32,60 @@ class Navigation:
         start_cell:Cell = self.grid[start_row][start_col]
         stop_cell:Cell = self.grid[stop_row][stop_col]
 
-        frontier:list[Cell] = [curr]
+        frontier:list[Cell] = [curr]    # Stack/queue
+        parents:list[Cell] = {}         # Previously visited node for finding shortest path
         explored:list[Cell] = []
 
         if curr == stop_cell:
             return curr
         
         while frontier != []:
-            curr = frontier.pop(0)  # Pop from start of list FIFO
+            curr = frontier.pop(0)      # Pop from start of list FIFO
             explored.append(curr)
-            self.window.update()
             curr.colour = colour_set["visited"]
             start_cell.colour = colour_set["start"]
             stop_cell.colour = colour_set["stop"]
+            self.window.update()
             self.maze.draw_grid(canvas=self.canvas)
-
-            queue = []
+            time.sleep(0.01)
 
             for row, col in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
                 new_row, new_col = curr.row+row, curr.col+col
                 if 0 <= new_row < len(self.grid) and 0 <= new_col < len(self.grid[0]):
-                    if self.grid[new_row][new_col] in queue:
+                    neighbour = self.grid[new_row][new_col]
+                    if not neighbour.path:
                         continue
-                    if self.grid[new_row][new_col].path:
-                        self.grid[new_row][new_col].colour = colour_set["neighbour"]
-                        queue.append(self.grid[new_row][new_col])
+                    if neighbour == stop_cell:
+                        # Append goal cell to find parent
+                        parents[(neighbour.row, neighbour.col)] = curr
+                        path = self.shortest_path(start=start_cell, stop=stop_cell, parents=parents)
+                        for cell in path[1:-1]:
+                            cell.colour = colour_set["solution"]
+                            self.window.update()
+                            self.maze.draw_grid(canvas=self.canvas)
+                            time.sleep(0.01)
+                        return path
+                    if (neighbour not in frontier) and (neighbour not in explored):
+                        parents[(neighbour.row, neighbour.col)] = curr
+                        frontier.append(neighbour)
 
-            for cell in queue:
-                if cell == stop_cell:
-                    return cell
-                if (cell not in frontier) and (cell not in explored):
-                    frontier.append(cell)
-            
-            for _ in explored:
-                _.colour = colour_set["visited"]
+            # Colour visualization for cells that are currently in the queue
+            for cell in frontier:
+                cell.colour = colour_set["queue"]
         return
+
+    def shortest_path(self, start:Cell, stop:Cell, parents:dict):
+        '''
+        Returns the shortes
+        '''
+        path = []
+        prev = stop
+        while prev != start:
+            path.append(self.grid[prev.row][prev.col])
+            prev = parents[(prev.row, prev.col)]
+        path.append(self.grid[start.row][start.col])
+        path.reverse()
+        return path
 
 def main():
     nav = Navigation(file_name="maze.csv")
