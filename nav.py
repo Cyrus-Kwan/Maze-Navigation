@@ -42,7 +42,7 @@ class Navigation:
         while frontier != []:
             curr = frontier.pop(0)      # Pop from start of list FIFO
             explored.append(curr)
-            curr.colour = colour_set["visited"]
+            curr.colour = colour_set["explored"]
             start_cell.colour = colour_set["start"]
             stop_cell.colour = colour_set["stop"]
             self.window.update()
@@ -71,7 +71,7 @@ class Navigation:
 
             # Colour visualization for cells that are currently in the queue
             for cell in frontier:
-                cell.colour = colour_set["queue"]
+                cell.colour = colour_set["frontier"]
         return
 
     def shortest_path(self, start:Cell, stop:Cell, parents:dict):
