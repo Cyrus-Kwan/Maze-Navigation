@@ -2,6 +2,7 @@ from maze import Maze
 from cell import *
 
 import tkinter as tk
+import numpy as np
 import time
 
 class Navigation:
@@ -19,6 +20,36 @@ class Navigation:
         self.canvas = tk.Canvas(master=self.window, width=self.maze.width, height=self.maze.height)
         self.canvas.pack()
 
+    def heuristic(self, cell:Cell, stop_cell:Cell, metric:str="euclidean"):
+        x_dist:int = abs(cell.row - stop_cell.row)
+        y_dist:int = abs(cell.col - stop_cell.col)
+        dist:float = None
+        match metric:
+            case "euclidean":
+                sum_of_squares:int = (x_dist**2) + (y_dist**2)
+                dist:float = np.sqrt(sum_of_squares)
+
+                return dist
+            case "manhattan":
+                dist:float = sum((x_dist, y_dist))
+
+        return dist
+
+    
+    def shortest_path(self, start:Cell, stop:Cell, parents:dict):
+        '''
+        Returns the shortest path from a child:parent map
+        '''
+        path = []
+        prev = stop
+        while prev != start:
+            path.append(self.grid[prev.row][prev.col])
+            prev = parents[(prev.row, prev.col)]
+        path.append(self.grid[start.row][start.col])
+        path.reverse()
+        return path
+    
+    # Pathfinding Algorithms
     def breadth_first_search(self, start:tuple, stop:tuple):
         start_row:int = start[0]
         start_col:int = start[1]
@@ -33,8 +64,8 @@ class Navigation:
             raise AttributeError("Start and stop cells must be valid")
 
         frontier:list[Cell] = [curr]                # Stack/queue
-        parents:list[Cell] = {}                     # Previously visited node for finding shortest path
         explored:list[Cell] = []                    # Do not repeat neighbours
+        parents:dict[Cell] = {}                     # Previously visited node for finding shortest path
 
         if curr == stop_cell:
             return curr
@@ -52,7 +83,8 @@ class Navigation:
             time.sleep(0.01)
 
             # Check surrounding current cell for neighbours
-            for row, col in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
+            # Add neighbours starting from top clockwise
+            for row, col in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
                 new_row, new_col = curr.row+row, curr.col+col
                 if 0 <= new_row < len(self.grid) and 0 <= new_col < len(self.grid[0]):
                     neighbour = self.grid[new_row][new_col]
@@ -71,38 +103,95 @@ class Navigation:
                         # Append goal cell to find parent
                         parents[(neighbour.row, neighbour.col)] = curr
                         path = self.shortest_path(start=start_cell, stop=stop_cell, parents=parents)
+                        expanded = len(explored)
                         for cell in path[1:-1]:
                             # Animate solution
                             cell.colour = colour_set["solution"]
                             self.window.update()
                             self.maze.draw_grid(canvas=self.canvas)
                             time.sleep(0.01)
-                        return path
+                        return path, expanded
 
             # Colour visualization for cells that are currently in the queue
             for cell in frontier:
                 cell.colour = colour_set["frontier"]
-        raise AttributeError("The given matrix has solution.")
+        raise AttributeError("The given matrix has no solution.")
+    
         return 
+    
+    def depth_first_search(self, start:tuple, stop:tuple):
+        start_row:int = start[0]
+        start_col:int = start[1]
+        stop_row:int = stop[0]
+        stop_col:int = stop[1]
 
-    def shortest_path(self, start:Cell, stop:Cell, parents:dict):
-        '''
-        Returns the shortest path from a child:parent map
-        '''
-        path = []
-        prev = stop
-        while prev != start:
-            path.append(self.grid[prev.row][prev.col])
-            prev = parents[(prev.row, prev.col)]
-        path.append(self.grid[start.row][start.col])
-        path.reverse()
-        return path
+        curr:Cell = self.grid[start_row][start_col]
+        start_cell:Cell = self.grid[start_row][start_col]
+        stop_cell:Cell = self.grid[stop_row][stop_col]
+
+        # Must be valid cell for start and stop
+        if not (start_cell.path and stop_cell.path):
+            raise AttributeError("Start and stop cells must be valid")
+        
+        frontier:list[Cell] = [curr]            # Stack/queue
+        explored:list[Cell] = []                # Do not repeat neighbours
+        parents:dict[Cell] = {}
+        paths:list = []
+
+        while frontier != []:
+            curr:Cell = frontier.pop(-1)        # Pop from end of frontier
+            explored.append(curr)
+
+            # Animate window
+            curr.colour = colour_set["explored"]
+            start_cell.colour = colour_set["start"]
+            stop_cell.colour = colour_set["stop"]
+            self.window.update()
+            self.maze.draw_grid(canvas=self.canvas)
+            time.sleep(0.01)
+
+            # Add neighbours starting from top clockwise
+            for row, col in [(-1, 0), (0, 1), (1, 0), (0, -1)]:
+                new_row, new_col = curr.row+row, curr.col+col
+                if 0 <= new_row < len(self.grid) and 0 <= new_col < len(self.grid[0]):
+                    neighbour:Cell = self.grid[new_row][new_col]
+
+                    # Check the neighbour is not a wall
+                    if not neighbour.path:
+                        continue
+                    
+                    # Check the neighbour has not been visited
+                    if (neighbour not in frontier) and (neighbour not in explored):
+                        parents[(neighbour.row, neighbour.col)] = curr
+                        frontier.append(neighbour)
+
+                        # Stop when the solution has been found
+                        if neighbour == stop_cell:
+                            # Append goal cell to find parent
+                            parents[(neighbour.row, neighbour.col)] = curr
+                            path = self.shortest_path(start=start_cell, stop=stop_cell, parents=parents)
+                            expanded = len(explored)
+                            for cell in path[1:-1]:
+                                # Animate solution
+                                cell.colour = colour_set["solution"]
+                                self.window.update()
+                                self.maze.draw_grid(canvas=self.canvas)
+                                time.sleep(0.01)
+                            return path, expanded
+
+            # Colour visualization for cells that are currently in the queue
+            for cell in frontier:
+                cell.colour = colour_set["frontier"]
+        raise AttributeError("The given matrix has no solution.")
+    
+        return
 
 def main():
     nav = Navigation(file_name="maze.csv")
-    path = nav.breadth_first_search(start=(10,2), stop=(12,19))
+    path, expanded = nav.depth_first_search(start=(0,0), stop=(19,19))
     short_path = [cell.__str__() for cell in path]
-    print(short_path)
+    print("distance:", len(short_path))
+    print("expanded:", expanded)
     nav.window.mainloop()
 
     return
