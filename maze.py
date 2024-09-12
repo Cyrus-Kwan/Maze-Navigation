@@ -6,6 +6,7 @@ class Maze:
         self.rows:int = rows
         self.cols:int = cols
 
+        self.grid:list[list] = None
         if file_name:
             self.grid:list[list] = self.import_grid(file=file_name)
         else:
@@ -38,8 +39,8 @@ class Maze:
             file.writelines(lines)
 
     def import_grid(self, file:str):
-        with open(file=file, mode="r") as file:
-            string:str = file.read()
+        with open(file=file, mode="r") as file_handle:
+            string:str = file_handle.read()
             matrix:list = [row.split(",")[1:] for row in string.split("\n")[1:]]
             self.rows:int = len(matrix)
             self.cols:int = len(matrix[0])
@@ -53,7 +54,11 @@ class Maze:
         return grid
     
     def create_grid(self):
-        grid = [[Cell(row=row, col=col) for col in range(self.cols)] for row in range(self.rows)]
+        grid = [
+            [
+                Cell(row=row, col=col) for col in range(self.cols)
+            ] for row in range(self.rows)
+        ]
         return grid
 
 def main():
@@ -62,15 +67,12 @@ def main():
     canvas = tk.Canvas(root, width=maze.width, height=maze.height)
     canvas.pack()
 
-    maze.export_grid("maze.csv")
+    # maze.export_grid("maze.csv")
     maze.draw_grid(canvas=canvas)
-    # while True:
-    #     maze.new_grid()
-    #     maze.draw_grid(canvas=canvas)
-    #     root.update()
-    #     time.sleep(1)
-
-    root.mainloop()
+    
+    root.update()
+    frames = [maze.capture_frame(root=root)]
+    maze.save_gif(frames=frames, name="test.gif")
     return
 
 if __name__ == "__main__":
